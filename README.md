@@ -1,6 +1,6 @@
 # 💬 CLI Chat App with RDBMS
 
-A lightweight, terminal-based chat application using **Bash**, **SQLite**, and **file handling**. This app supports private messaging and group chats – all through a simple CLI interface.
+A lightweight, terminal-based chat application using **Bash**, **MySQL**, and **file handling**. This app supports private messaging and group chats – all through a simple CLI interface.
 
 ---
 
@@ -17,8 +17,4 @@ A lightweight, terminal-based chat application using **Bash**, **SQLite**, and *
 ## 🛠️ Tech Stack
 
 - **Shell Scripting (Bash)**
-- **SQLite3** (lightweight relational DB)
----
-
-## 🗂️ Project Structure
-
+- **MySQL** (lightweight relational DB)
