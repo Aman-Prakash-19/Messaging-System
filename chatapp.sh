@@ -1,6 +1,5 @@
 #!/bin/bash
 
-# DB Connection Details
 DB_HOST="sql12.freesqldatabase.com"
 DB_PORT="3306"
 DB_USER="sql12773185"
@@ -35,19 +34,43 @@ function pause() {
     read
 }
 
+function generate_otp() {
+    echo $((100000 + RANDOM % 900000))
+}
+
+function send_otp_email() {
+    local email=$1
+    local otp=$2
+    echo -e "Subject: OTP Verification\n\nYour OTP is: $otp" | msmtp "$email"
+}
+
 function signup() {
     clear
     banner
-    echo -e "${BLUE}🔐 Sign Up${NC}"
+    echo -e "${BLUE}🔐 Sign Up with Email OTP Verification${NC}"
     read -p "Username: " username
+    read -p "Email: " email
     read -s -p "Password: " password
     echo
 
-    result=$(mysql_exec "INSERT INTO users01 (username, password) VALUES ('$username', '$password');" 2>&1)
-
-    if [[ "$result" == *"Duplicate entry"* ]]; then
+    # Check if user exists
+    existing=$(mysql_exec "SELECT id FROM users01 WHERE username='$username';")
+    if [[ -n "$existing" ]]; then
         echo -e "${RED}❌ Username already exists.${NC}"
+        pause
+        return
+    fi
+
+    otp=$(generate_otp)
+    send_otp_email "$email" "$otp"
+    echo -e "${YELLOW}📧 OTP sent to $email${NC}"
+
+    read -p "Enter the OTP: " user_otp
+
+    if [[ "$user_otp" != "$otp" ]]; then
+        echo -e "${RED}❌ Incorrect OTP. Signup failed.${NC}"
     else
+        mysql_exec "INSERT INTO users01 (username, email, password) VALUES ('$username', '$email', '$password');"
         echo -e "${GREEN}✅ Successfully signed up!${NC}"
     fi
     pause
@@ -62,7 +85,6 @@ function login() {
     echo
 
     user_id=$(mysql_exec "SELECT id FROM users01 WHERE username='$username' AND password='$password';")
-
     if [ -z "$user_id" ]; then
         echo -e "${RED}❌ Incorrect username or password.${NC}"
         pause
@@ -171,9 +193,7 @@ while true; do
     read -p "Choose: " option
 
     case "$option" in
-        1)
-            login && main_menu
-            ;;
+        1) login && main_menu ;;
         2) signup ;;
         3) echo -e "${YELLOW}👋 See you next time!${NC}"; exit ;;
         *) echo -e "${RED}Invalid input.${NC}"; pause ;;
