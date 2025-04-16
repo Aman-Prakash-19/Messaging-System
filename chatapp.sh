@@ -172,12 +172,14 @@ function main_menu() {
         banner
         echo -e "${CYAN}Welcome, $logged_in_username 👋${NC}"
         echo "1) 💬 Chat with a user"
-        echo "2) 🚪 Logout"
+        echo "2) 👥 Group Chat"
+        echo "3) 🚪 Logout"
         read -p "Choose: " option
 
         case "$option" in
             1) list_users ;;
-            2) logged_in_user_id=""; logged_in_username=""; return ;;
+            2) source ./groupchat.sh ;;
+            3) logged_in_user_id=""; logged_in_username=""; return ;;
             *) echo -e "${RED}Invalid option.${NC}"; pause ;;
         esac
     done
