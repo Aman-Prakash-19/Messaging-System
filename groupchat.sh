@@ -10,7 +10,7 @@ NC='\033[0m'
 
 mysql_exec()
 {
-    mysql -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USER" -p"$DB_PASS" -D "$DB_NAME" -se "$1"
+    mysql -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USER" -p"$DB_PASS" -D "$DB_NAME" -N -s -e "$1" 2>/dev/null
 }
 
 show_group_menu()
@@ -87,7 +87,7 @@ group_action_menu()
         case "$choice" in
             1) send_group_message "$gid" ;;
             2) view_group_messages "$gid" ;;
-            3) manage_group "$gid" ;;
+            3) manage_group "$gid" "$gname" ;;
             4) return ;;
             *) echo -e "${RED}❌ Invalid choice.${NC}"; pause ;;
         esac
@@ -115,12 +115,13 @@ view_group_messages()
 manage_group()
 {
     gid=$1
+    gname=$2
     while true; do
         clear
         banner
-        echo -e "${BLUE}🛠 Manage Group ID $gid${NC}"
+        echo -e "${BLUE}🛠 Manage Group: $gname${NC}"
         echo "1) 👥 View Members"
-        echo "2) ✏️ Change Group Name"
+        echo "2) ✏️  Change Group Name"
         echo "3) ➕ Add Members"
         echo "4) ➖ Remove Members"
         echo "5) 🔙 Back"
@@ -147,15 +148,23 @@ view_group_members()
 change_group_name()
 {
     gid=$1
-    read -p "Enter new group name: " newname
-    mysql_exec "UPDATE groups SET name = '$newname' WHERE id = $gid;"
-    echo -e "${GREEN}✅ Group name updated.${NC}"
+    current_name=$(mysql_exec "SELECT name FROM groups WHERE id = $gid;")
+    echo -e "${YELLOW}📝 Current Group Name: ${CYAN}$current_name${NC}"
+    read -p "Enter new group name: " new_name
+    mysql_exec "UPDATE groups SET name = '$new_name' WHERE id = $gid;"
+    echo -e "${GREEN}✅ Group name updated to '$new_name'${NC}"
     pause
 }
 
 add_to_group()
 {
     gid=$1
+    # List all available users
+    echo -e "${YELLOW}👥 Available Users:${NC}"
+    mysql_exec "SELECT id, username FROM users01;" | while IFS=$'\t' read -r id name; do
+        echo -e "$name"
+    done
+
     read -p "Enter username to add: " uname
     uid=$(mysql_exec "SELECT id FROM users01 WHERE username = '$uname';")
     if [[ -n "$uid" ]]; then
@@ -164,12 +173,20 @@ add_to_group()
     else
         echo -e "${RED}❌ User not found.${NC}"
     fi
+
     pause
 }
 
 remove_from_group()
 {
     gid=$1
+    
+    # List all users in the group
+    echo -e "${YELLOW}👥 Available Users:${NC}"
+    mysql_exec "SELECT u.id, u.username FROM users01 u JOIN group_members gm ON u.id = gm.user_id WHERE gm.group_id = $gid;" | while IFS=$'\t' read -r id name; do
+        echo -e "$name"
+    done
+
     read -p "Enter username to remove: " uname
     uid=$(mysql_exec "SELECT id FROM users01 WHERE username = '$uname';")
     if [[ -n "$uid" ]]; then
