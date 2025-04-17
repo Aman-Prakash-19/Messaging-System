@@ -1,5 +1,3 @@
-#!/bin/bash
-
 # DB Connection Details
 DB_HOST="sql12.freesqldatabase.com"
 DB_PORT="3306"
@@ -54,7 +52,6 @@ function signup() {
     read -s -p "Password: " password
     echo
 
-    # Check if user exists
     existing=$(mysql_exec "SELECT id FROM users01 WHERE username='$username';")
     if [[ -n "$existing" ]]; then
         echo -e "${RED}❌ Username already exists.${NC}"
@@ -180,6 +177,7 @@ function chat_menu() {
         esac
     done
 }
+
 function forgot_password() {
     clear
     banner
@@ -222,8 +220,6 @@ function forgot_password() {
     pause
 }
 
-
-
 function main_menu() {
     while true; do
         clear
@@ -237,7 +233,7 @@ function main_menu() {
         case "$option" in
             1) list_users ;;
             2) source ./groupchat.sh ;;
-            3) logged_in_user_id=""; logged_in_username=""; return ;;
+            3) logout; return ;;
             *) echo -e "${RED}Invalid option.${NC}"; pause ;;
         esac
     done
@@ -254,12 +250,22 @@ while true; do
     read -p "Choose: " option
 
     case "$option" in
-        1) login && main_menu ;;
+        1) 
+            login && main_menu 
+            logged_in_user_id=""
+            logged_in_username=""
+            ;;
         2) signup ;;
         3) forgot_password ;;
-        4) echo -e "${YELLOW}👋 See you next time!${NC}"; exit ;;
+        4)  
+            if [[ -n "$logged_in_user_id" ]]; then
+                echo -e "${YELLOW}Logging out...${NC}"
+                logout
+            fi
+            echo -e "${YELLOW}👋 See you next time!${NC}"
+            exit
+            ;;
         *) echo -e "${RED}❗ Invalid input.${NC}"; pause ;;
     esac
 done
-# Entry Menu
 
