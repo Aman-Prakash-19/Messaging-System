@@ -1,5 +1,3 @@
-#!/bin/bash
-
 # DB Connection Details
 DB_HOST="sql12.freesqldatabase.com"
 DB_PORT="3306"
@@ -70,17 +68,25 @@ function login() {
     else
         logged_in_user_id=$user_id
         logged_in_username=$username
+        mysql_exec "UPDATE users01 SET status='online' WHERE id=$logged_in_user_id;"
         echo -e "${GREEN}✅ Logged in as $username${NC}"
         pause
         return 0
     fi
 }
 
+function logout() {
+    mysql_exec "UPDATE users01 SET status='offline' WHERE id=$logged_in_user_id;"
+    logged_in_user_id=""
+    logged_in_username=""
+}
+
 function list_users() {
     clear
     banner
     echo -e "${CYAN}👥 Available Users to Chat:${NC}"
-    users=$(mysql_exec "SELECT id, username FROM users01 WHERE id != $logged_in_user_id;")
+
+    users=$(mysql_exec "SELECT id, username, status FROM users01 WHERE id != $logged_in_user_id;")
 
     if [ -z "$users" ]; then
         echo -e "${YELLOW}No other users found!${NC}"
@@ -90,8 +96,13 @@ function list_users() {
 
     declare -A user_map
     index=1
-    while IFS=$'\t' read -r id name; do
-        echo "$index) $name"
+    while IFS=$'\t' read -r id name status; do
+        if [[ "$status" == "online" ]]; then
+            echo -e "$index) $name - ${GREEN}Online${NC}"
+        else
+            echo -e "$index) $name - ${RED}Offline${NC}"
+        fi
+
         user_map[$index]=$id
         ((index++))
     done <<< "$users"
@@ -133,6 +144,7 @@ function chat_menu() {
                 clear
                 banner
                 echo -e "${YELLOW}📜 Chat History with $receiver_name:${NC}"
+
                 mysql_exec "SELECT u.username, m.message, m.timestamp FROM messages01 m JOIN users01 u ON m.sender_id=u.id WHERE (sender_id=$logged_in_user_id AND receiver_id=$receiver_id) OR (sender_id=$receiver_id AND receiver_id=$logged_in_user_id) ORDER BY timestamp;" | while IFS=$'\t' read -r sender msg time; do
                     echo -e "${CYAN}[$time] $sender:${NC} $msg"
                 done
@@ -155,7 +167,7 @@ function main_menu() {
 
         case "$option" in
             1) list_users ;;
-            2) logged_in_user_id=""; logged_in_username=""; return ;;
+            2) logout; return ;;
             *) echo -e "${RED}Invalid option.${NC}"; pause ;;
         esac
     done
@@ -175,7 +187,13 @@ while true; do
             login && main_menu
             ;;
         2) signup ;;
-        3) echo -e "${YELLOW}👋 See you next time!${NC}"; exit ;;
+        3)
+            if [[ -n "$logged_in_user_id" ]]; then
+                logout
+            fi
+            echo -e "${YELLOW}👋 See you next time!${NC}"
+            exit
+            ;;
         *) echo -e "${RED}Invalid input.${NC}"; pause ;;
     esac
 done
