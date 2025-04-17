@@ -166,29 +166,26 @@ function chat_menu() {
                 clear
                 banner
                 echo -e "${YELLOW}📜 Chat History with $receiver_name:${NC}"
-
-                mysql_exec "SELECT u.username, m.message, m.timestamp FROM messages01 m JOIN users01 u ON m.sender_id=u.id WHERE (sender_id=$logged_in_user_id AND receiver_id=$receiver_id) OR (sender_id=$receiver_id AND receiver_id=$logged_in_user_id) ORDER BY timestamp;" | while IFS=$'\t' read -r sender msg time; do
-                    echo -e "${CYAN}[$time] $sender:${NC} $msg"
-                # Update messages as read
+                 # Update messages as read when viewing them
                 mysql_exec "UPDATE messages01 SET read_status='read' \
                 WHERE receiver_id=$logged_in_user_id AND sender_id=$receiver_id AND read_status='unread';"
 
-                # Fetch messages with read status
-                mysql_exec "SELECT u.username, m.message, m.timestamp,
-                   CASE WHEN m.receiver_id=$logged_in_user_id THEN m.read_status ELSE NULL END
-                   FROM messages01 m
-                   JOIN users01 u ON m.sender_id = u.id
-                   WHERE (sender_id=$logged_in_user_id AND receiver_id=$receiver_id)
-                      OR (sender_id=$receiver_id AND receiver_id=$logged_in_user_id)
-                   ORDER BY m.timestamp;" | while IFS=$'\t' read -r sender msg time status; do
+                # Fetch messages with read_status
+                mysql_exec "SELECT u.username, m.message, m.timestamp, m.read_status 
+                            FROM messages01 m 
+                            JOIN users01 u ON m.sender_id = u.id 
+                            WHERE (m.sender_id=$logged_in_user_id AND m.receiver_id=$receiver_id) 
+                               OR (m.sender_id=$receiver_id AND m.receiver_id=$logged_in_user_id)
+                            ORDER BY m.timestamp;" | while IFS=$'\t' read -r sender msg time status; do
 
+                    # Display messages with read/unread status
                     if [[ "$sender" == "$logged_in_username" ]]; then
-                        echo -e "${CYAN}[$time] You:${NC} $msg"
+                        echo -e "[$time] You: $msg"
                     else
                         if [[ "$status" == "unread" ]]; then
-                            echo -e "${CYAN}[$time] $sender:${NC} $msg ${RED}(unread)${NC}"
+                            echo -e "[$time] $sender: $msg (${RED}unread${NC})"
                         else
-                            echo -e "${CYAN}[$time] $sender:${NC} $msg"
+                            echo -e "[$time] $sender: $msg" 
                         fi
                     fi    
                 done
