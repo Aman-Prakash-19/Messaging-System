@@ -166,26 +166,22 @@ function chat_menu() {
                 clear
                 banner
                 echo -e "${YELLOW}📜 Chat History with $receiver_name:${NC}"
-
-                mysql_exec "SELECT u.username, m.message, m.timestamp FROM messages01 m JOIN users01 u ON m.sender_id=u.id WHERE (sender_id=$logged_in_user_id AND receiver_id=$receiver_id) OR (sender_id=$receiver_id AND receiver_id=$logged_in_user_id) ORDER BY timestamp;" | while IFS=$'\t' read -r sender msg time; do
-                    echo -e "${CYAN}[$time] $sender:${NC} $msg"
-                done
+                
                 # Update messages as read
                 mysql_exec "UPDATE messages01 SET status='read' \
                 WHERE receiver_id=$logged_in_user_id AND sender_id=$receiver_id AND status='unread';"
 
                 # Fetch messages with read status
-                mysql_exec "SELECT u.username, m.message, m.timestamp,
-                    CASE WHEN m.receiver_id=$logged_in_user_id THEN m.status ELSE NULL END
+                mysql_exec "SELECT u.username, m.message, m.timestamp, m.status
                     FROM messages01 m
                     JOIN users01 u ON m.sender_id = u.id
                     WHERE (sender_id=$logged_in_user_id AND receiver_id=$receiver_id)
                         OR (sender_id=$receiver_id AND receiver_id=$logged_in_user_id)
                     ORDER BY m.timestamp;" | while IFS=$'\t' read -r sender msg time status; do
-                        if [[ "$sender" == "$logged_in_username" ]]; then
+                        if [[ "$sender" != "$logged_in_username" ]]; then
                             echo -e "${CYAN}[$time] You:${NC} $msg"
                         else
-                            if [[ "$status" == "unread" ]]; then
+                            if [[ "$(echo "$status" | xargs)" == "unread" ]]; then
                                 echo -e "${CYAN}[$time] $sender:${NC} $msg ${RED}(unread)${NC}"
                             else
                                 echo -e "${CYAN}[$time] $sender:${NC} $msg"
