@@ -165,6 +165,49 @@ function chat_menu() {
         esac
     done
 }
+function forgot_password() {
+    clear
+    banner
+    echo -e "${BLUE}🔁 Forgot Password${NC}"
+    read -p "Enter your registered email: " email
+
+    exists=$(mysql_exec "SELECT COUNT(*) FROM users01 WHERE email='$email';")
+
+    if [[ "$exists" -eq 1 ]]; then
+        otp=$(generate_otp)
+        expiry=$(date -d "+5 minutes" +"%Y-%m-%d %H:%M:%S")
+        mysql_exec "UPDATE users01 SET otp_code='$otp', otp_expiry='$expiry' WHERE email='$email';"
+        echo -e "Subject: OTP for Password Reset\n\nYour OTP is: $otp\nExpires in 5 minutes." | msmtp "$email"
+        echo -e "${YELLOW}📧 OTP sent to $email${NC}"
+
+        read -p "Enter the OTP: " entered_otp
+        result=$(mysql_exec "SELECT COUNT(*) FROM users01 WHERE email='$email' AND otp_code='$entered_otp' AND otp_expiry > NOW();")
+
+        if [[ "$result" -eq 1 ]]; then
+            echo -e "${GREEN}✅ OTP verified${NC}"
+            while true; do
+                read -s -p "Enter new password: " new_pass
+                echo
+                read -s -p "Confirm new password: " confirm_pass
+                echo
+                if [[ "$new_pass" == "$confirm_pass" ]]; then
+                    mysql_exec "UPDATE users01 SET password='$new_pass', otp_code=NULL, otp_expiry=NULL WHERE email='$email';"
+                    echo -e "${GREEN}✅ Password updated successfully!${NC}"
+                    break
+                else
+                    echo -e "${RED}❌ Passwords do not match. Try again.${NC}"
+                fi
+            done
+        else
+            echo -e "${RED}❌ Invalid or expired OTP.${NC}"
+        fi
+    else
+        echo -e "${RED}❌ Email not found.${NC}"
+    fi
+    pause
+}
+
+
 
 function main_menu() {
     while true; do
@@ -172,31 +215,36 @@ function main_menu() {
         banner
         echo -e "${CYAN}Welcome, $logged_in_username 👋${NC}"
         echo "1) 💬 Chat with a user"
-        echo "2) 🚪 Logout"
+        echo "2) 👥 Group Chat"
+        echo "3) 🚪 Logout"
         read -p "Choose: " option
 
         case "$option" in
             1) list_users ;;
-            2) logged_in_user_id=""; logged_in_username=""; return ;;
+            2) source ./groupchat.sh ;;
+            3) logged_in_user_id=""; logged_in_username=""; return ;;
             *) echo -e "${RED}Invalid option.${NC}"; pause ;;
         esac
     done
 }
 
-# Entry Menu
 while true; do
     clear
     banner
     echo "1) 🔑 Login"
     echo "2) 📝 Signup"
-    echo "3) ❌ Exit"
+    echo "3) 🔁 Forgot Password"
+    echo "4) ❌ Exit"
+    echo
     read -p "Choose: " option
 
     case "$option" in
         1) login && main_menu ;;
         2) signup ;;
-        3) echo -e "${YELLOW}👋 See you next time!${NC}"; exit ;;
-        *) echo -e "${RED}Invalid input.${NC}"; pause ;;
+        3) forgot_password ;;
+        4) echo -e "${YELLOW}👋 See you next time!${NC}"; exit ;;
+        *) echo -e "${RED}❗ Invalid input.${NC}"; pause ;;
     esac
 done
+# Entry Menu
 
