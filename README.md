@@ -18,3 +18,7 @@ A lightweight, terminal-based chat application using **Bash**, **MySQL**, and **
 
 - **Shell Scripting (Bash)**
 - **MySQL** (lightweight relational DB)
+
+## ERD
+
+![image](https://github.com/user-attachments/assets/4aeed7e9-dabc-4bd3-9558-ccba8e48303e)
